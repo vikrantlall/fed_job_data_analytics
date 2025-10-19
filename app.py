@@ -31,7 +31,6 @@ DEPARTMENTS = [
     {'code': 'TR', 'name': 'Department of the Treasury', 'acronym': 'Treasury'},
     {'code': 'VA', 'name': 'Department of Veterans Affairs', 'acronym': 'VA'},
     {'code': 'OM', 'name': 'Office of Personnel Management', 'acronym': 'OPM'},
-    {'code': 'HSCB', 'name': 'Federal Emergency Management Agency', 'acronym': 'FEMA'},
     {'code': 'GS', 'name': 'General Services Administration', 'acronym': 'GSA'},
     {'code': 'NN', 'name': 'National Aeronautics and Space Administration', 'acronym': 'NASA'},
     {'code': 'SB', 'name': 'Small Business Administration', 'acronym': 'SBA'},
