@@ -17,25 +17,25 @@ DEPARTMENTS = [
     {'code': 'DD', 'name': 'Department of Defense', 'acronym': 'DOD'},
     {'code': 'ED', 'name': 'Department of Education', 'acronym': 'ED'},
     {'code': 'DN', 'name': 'Department of Energy', 'acronym': 'DOE'},
-    {'code': 'EP00', 'name': 'Environmental Protection Agency', 'acronym': 'EPA'},
+    {'code': 'EP', 'name': 'Environmental Protection Agency', 'acronym': 'EPA'},
     {'code': 'HE', 'name': 'Department of Health and Human Services', 'acronym': 'HHS'},
     {'code': 'HS', 'name': 'Department of Homeland Security', 'acronym': 'DHS'},
     {'code': 'HU', 'name': 'Department of Housing and Urban Development', 'acronym': 'HUD'},
     {'code': 'IN', 'name': 'Department of the Interior', 'acronym': 'DOI'},
     {'code': 'DJ', 'name': 'Department of Justice', 'acronym': 'DOJ'},
     {'code': 'DL', 'name': 'Department of Labor', 'acronym': 'DOL'},
-    {'code': 'OI00', 'name': 'Office of the Director of National Intelligence', 'acronym': 'ODNI'},
-    {'code': 'SZ00', 'name': 'Social Security Administration', 'acronym': 'SSA'},
+    {'code': 'OI', 'name': 'Office of the Director of National Intelligence', 'acronym': 'ODNI'},
+    {'code': 'SZ', 'name': 'Social Security Administration', 'acronym': 'SSA'},
     {'code': 'ST', 'name': 'Department of State', 'acronym': 'DOS'},
     {'code': 'TD', 'name': 'Department of Transportation', 'acronym': 'DOT'},
     {'code': 'TR', 'name': 'Department of the Treasury', 'acronym': 'Treasury'},
     {'code': 'VA', 'name': 'Department of Veterans Affairs', 'acronym': 'VA'},
-    {'code': 'OM00', 'name': 'Office of Personnel Management', 'acronym': 'OPM'},
+    {'code': 'OM', 'name': 'Office of Personnel Management', 'acronym': 'OPM'},
     {'code': 'HSCB', 'name': 'Federal Emergency Management Agency', 'acronym': 'FEMA'},
     {'code': 'GS', 'name': 'General Services Administration', 'acronym': 'GSA'},
     {'code': 'NN', 'name': 'National Aeronautics and Space Administration', 'acronym': 'NASA'},
-    {'code': 'SB00', 'name': 'Small Business Administration', 'acronym': 'SBA'},
-    {'code': 'NF00', 'name': 'National Science Foundation', 'acronym': 'NSF'}
+    {'code': 'SB', 'name': 'Small Business Administration', 'acronym': 'SBA'},
+    {'code': 'NF', 'name': 'National Science Foundation', 'acronym': 'NSF'}
 ]
 
 HTML_TEMPLATE = '''
@@ -635,18 +635,42 @@ def fetch_jobs():
             }
 
             while True:
-                if next_url:
-                    full_url = f'https://data.usajobs.gov{next_url}'
-                    response = requests.get(full_url, headers=headers, timeout=30)
-                else:
-                    response = requests.get(base_url, headers=headers, params=params, timeout=30)
+                try:
+                    if next_url:
+                        full_url = f'https://data.usajobs.gov{next_url}'
+                        response = requests.get(full_url, headers=headers, timeout=30)
+                    else:
+                        response = requests.get(base_url, headers=headers, params=params, timeout=30)
 
-                if response.status_code == 200:
-                    try:
-                        api_data = response.json()
+                    if response.status_code == 200:
+                        # Get raw text first
+                        response_text = response.text.strip()
+
+                        # Check if response is empty
+                        if not response_text:
+                            logs.append({'message': f'⚠ Empty response from API for {dept_name}', 'type': 'warning'})
+                            break
+
+                        # Check if response looks like JSON
+                        if not response_text.startswith('{'):
+                            logs.append({'message': f'⚠ Invalid JSON response for {dept_name}', 'type': 'warning'})
+                            logs.append({'message': f'Response preview: {response_text[:100]}...', 'type': 'warning'})
+                            break
+
+                        # Try to parse JSON
+                        try:
+                            api_data = json.loads(response_text)
+                        except json.JSONDecodeError as je:
+                            logs.append({'message': f'JSON ERROR for {dept_name}: {str(je)}', 'type': 'error'})
+                            logs.append({'message': f'Error at position {je.pos}', 'type': 'error'})
+                            logs.append({'message': f'Response preview: {response_text[:200]}...', 'type': 'error'})
+                            break
+
                         jobs = api_data.get('data', [])
 
                         if not jobs:
+                            logs.append(
+                                {'message': f'No more jobs found for {dept_name} on page {page}', 'type': 'info'})
                             break
 
                         all_jobs.extend(jobs)
@@ -658,15 +682,28 @@ def fetch_jobs():
                         next_url = paging.get('next')
 
                         if not next_url:
+                            logs.append({'message': f'✓ Completed {dept_name} - no more pages', 'type': 'success'})
                             break
 
                         page += 1
 
-                    except ValueError as e:
-                        logs.append({'message': f'JSON PARSE ERROR: {str(e)}', 'type': 'error'})
+                    elif response.status_code == 404:
+                        logs.append({'message': f'⚠ No data found for {dept_name} (404)', 'type': 'warning'})
                         break
-                else:
-                    logs.append({'message': f'HTTP ERROR: Status {response.status_code}', 'type': 'error'})
+                    else:
+                        logs.append(
+                            {'message': f'HTTP ERROR for {dept_name}: Status {response.status_code}', 'type': 'error'})
+                        logs.append({'message': f'Response: {response.text[:200]}', 'type': 'error'})
+                        break
+
+                except requests.exceptions.Timeout:
+                    logs.append({'message': f'TIMEOUT for {dept_name} on page {page}', 'type': 'error'})
+                    break
+                except requests.exceptions.RequestException as re:
+                    logs.append({'message': f'REQUEST ERROR for {dept_name}: {str(re)}', 'type': 'error'})
+                    break
+                except Exception as e:
+                    logs.append({'message': f'UNEXPECTED ERROR for {dept_name}: {str(e)}', 'type': 'error'})
                     break
 
         logs.append({'message': f'===== PROCESSING {len(all_jobs)} JOBS =====', 'type': 'info'})
