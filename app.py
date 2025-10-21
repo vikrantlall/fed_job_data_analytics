@@ -368,6 +368,7 @@ HTML_TEMPLATE = '''
                             <th>Position Title</th>
                             <th>Department</th>
                             <th>Agency</th>
+                            <th>Position Status</th>
                             <th>Location</th>
                             <th>Salary Min</th>
                             <th>Salary Max</th>
@@ -475,6 +476,7 @@ HTML_TEMPLATE = '''
                     <td>${job['Position Title']}</td>
                     <td>${job['Department']}</td>
                     <td>${job['Agency']}</td>
+                    <td>${job['Position Status']}</td>
                     <td>${job['Location']}</td>
                     <td>${job['Salary Min']}</td>
                     <td>${job['Salary Max']}</td>
@@ -724,6 +726,7 @@ def fetch_jobs():
                 'Position Title': job.get('positionTitle', 'N/A'),
                 'Department': job.get('hiringDepartmentName', 'N/A'),
                 'Agency': job.get('hiringAgencyName', 'N/A'),
+                'Position Status': job.get('positionOpeningStatus', 'N/A'),
                 'Location': location_str,
                 'Salary Min': job.get('minimumSalary', 'N/A'),
                 'Salary Max': job.get('maximumSalary', 'N/A'),
